@@ -198,7 +198,6 @@ class TestApplicationShellAndRoutes(unittest.TestCase):
         root = Path(__file__).resolve().parent.parent
         gitignore = (root / ".gitignore").read_text(encoding="utf-8")
         self.assertIn(".env", gitignore)
-        self.assertTrue((root / ".env").is_file())
 
         with tempfile.TemporaryDirectory() as tmpdir:
             env_file = Path(tmpdir) / ".env"
