@@ -1,0 +1,1 @@
+"""Environmental telemetry provider adapters."""

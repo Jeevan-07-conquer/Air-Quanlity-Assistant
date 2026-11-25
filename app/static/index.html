@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Urban Air Quality Assistant</title>
+  <link rel="stylesheet" href="/static/styles/tokens.css" />
+  <link rel="stylesheet" href="/static/styles/app.css" />
+</head>
+
+<body data-atmosphere="moderate">
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <div class="atmosphere-backdrop" aria-hidden="true">
+    <div class="atmo-clouds"></div>
+    <div class="atmo-glow"></div>
+    <div class="atmo-horizon"></div>
+  </div>
+
+  <div class="app-frame">
+    <aside class="rail-sidebar" aria-label="Primary Navigation">
+      <a href="#landing" id="brand-home-link" class="rail-brand" title="Urban Air Quality Assistant — Home">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M5 10.5c3.5-2 10.5-2 14 0" />
+          <path d="M4.5 14c4-2 11-2 15 0" />
+          <path d="M7 17c3-1.3 7-1.3 10 0" />
+        </svg>
+      </a>
+      <nav aria-label="Primary">
+        <ul class="nav-list" id="primary-nav-list"></ul>
+      </nav>
+    </aside>
+
+    <div class="app-shell">
+      <header class="site-header">
+        <div class="header-top">
+          <div class="brand-group">
+            <span class="brand-title">Urban Air Quality Assistant</span>
+            <span class="brand-tagline">
+              Know the air. Understand the risk. Act on a plan that fits your life.
+            </span>
+          </div>
+          <div class="header-context" id="header-context"></div>
+        </div>
+      </header>
+
+      <main id="main-content" class="main-content" tabindex="-1">
+        <div id="live-announcer" class="sr-only" aria-live="polite"></div>
+        <div id="app-root">
+          <p class="muted-copy">Loading Urban Air Quality Assistant…</p>
+        </div>
+      </main>
+
+      <footer class="site-footer">
+        <p class="safety-notice">
+          <strong>Safety notice:</strong> This tool provides general air-quality guidance,
+          not medical diagnosis or treatment. Follow official public-health guidance and
+          contact a qualified clinician for health concerns. Seek urgent help for severe
+          breathing difficulty, chest pain, confusion, or other emergency symptoms.
+        </p>
+      </footer>
+    </div>
+  </div>
+
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+
+</html>

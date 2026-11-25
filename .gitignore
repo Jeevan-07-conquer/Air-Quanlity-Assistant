@@ -1,0 +1,24 @@
+# Environment secrets (never commit real API keys)
+.env
+.env.local
+.env.*.local
+
+# Private prompts & non-runtime repo docs/tests
+app/prompts/private_prompts.json
+docs/
+tests/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,114 @@
+/* Global Design Tokens — Atmospheric Weather Glass UI System */
+
+:root {
+  /* 1. Color — Atmospheric glass surfaces & crisp readable ink */
+  --color-bg-canvas: #121c22;
+  --color-bg-surface: rgba(20, 31, 38, 0.58);
+  --color-bg-surface-strong: rgba(15, 24, 30, 0.78);
+  --color-bg-subtle: rgba(255, 255, 255, 0.08);
+  --color-bg-charcoal: #0d151a;
+
+  --color-ink-primary: #f5f7f6;
+  --color-ink-secondary: #c9d4d2;
+  --color-ink-muted: #9eb0ae;
+  --color-ink-on-dark: #f5f7f6;
+
+  --color-border-subtle: rgba(255, 255, 255, 0.14);
+  --color-border-strong: rgba(255, 255, 255, 0.26);
+
+  /* Primary interactive accent (luminous sky-teal) */
+  --color-accent-primary: #4ea8b8;
+  --color-accent-primary-hover: #64bdcd;
+  --color-accent-primary-soft: rgba(78, 168, 184, 0.2);
+  --color-focus-ring: #8be0ef;
+
+  /* Restrained atmospheric severity tokens (always paired with text labels) */
+  --color-severity-low-fg: #9ce6be;
+  --color-severity-low-bg: rgba(30, 118, 78, 0.34);
+  --color-severity-low-border: rgba(124, 224, 170, 0.42);
+
+  --color-severity-moderate-fg: #f7d996;
+  --color-severity-moderate-bg: rgba(148, 102, 22, 0.36);
+  --color-severity-moderate-border: rgba(247, 217, 150, 0.44);
+
+  --color-severity-high-fg: #ffc099;
+  --color-severity-high-bg: rgba(164, 72, 24, 0.38);
+  --color-severity-high-border: rgba(255, 178, 130, 0.46);
+
+  --color-severity-severe-fg: #ffb5b5;
+  --color-severity-severe-bg: rgba(145, 36, 36, 0.42);
+  --color-severity-severe-border: rgba(255, 160, 160, 0.48);
+
+  --color-severity-neutral-fg: #d2dad9;
+  --color-severity-neutral-bg: rgba(255, 255, 255, 0.1);
+  --color-severity-neutral-border: rgba(255, 255, 255, 0.22);
+
+  /* 2. Typography */
+  --font-sans: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Iowan Old Style", "Georgia", "Times New Roman", serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: clamp(2rem, 3.4vw, 2.85rem);
+  --text-metric: clamp(2.4rem, 4.2vw, 3.35rem);
+
+  --leading-tight: 1.14;
+  --leading-snug: 1.32;
+  --leading-normal: 1.55;
+
+  /* 3. Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* 4. Radius */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* 5. Elevation & Glass */
+  --shadow-none: none;
+  --shadow-xs: 0 4px 18px rgba(4, 10, 14, 0.24);
+  --shadow-sm: 0 12px 34px rgba(4, 10, 14, 0.36);
+  --shadow-lg: 0 24px 60px rgba(3, 8, 12, 0.55);
+  --glass-blur: blur(18px);
+
+  /* 6. Motion */
+  --duration-fast: 180ms;
+  --duration-base: 320ms;
+  --duration-flow: 460ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --touch-min: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-flow: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
