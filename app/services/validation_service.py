@@ -12,12 +12,20 @@ from app.schemas.policy import PolicyDecision
 from app.schemas.telemetry import EnvironmentalTelemetry
 
 MEDICAL_DIAGNOSIS_PATTERNS = [
-    re.compile(r"\b(?<!not\s)(?<!no\s)(diagnos(e|ed|ing)|you\s+have\s+(asthma|copd|bronchitis)|prescrib(e|ed|ing)|take\s+\d+\s*mg|inhaler\s+dosage|antibiotic|steroid\s+dose)\b", re.I),
+    re.compile(
+        r"\b(?<!not\s)(?<!no\s)(diagnos(e|ed|ing)|you\s+have\s+(asthma|copd|bronchitis)"
+        r"|prescrib(e|ed|ing)|take\s+\d+\s*mg|inhaler\s+dosage|antibiotic|steroid\s+dose)\b",
+        re.I,
+    ),
     re.compile(r"\b(?<!not\s)(?<!no\s)(?<!not\sa\s)medical\s+diagnosis\b", re.I),
 ]
 
 GUARANTEE_PATTERNS = [
-    re.compile(r"\b(100%\s*(safe|protected|protection|clean)|guarantees?\s+(protection|safe|zero\s+exposure)|makes\s+hazardous\s+air\s+harmless)\b", re.I),
+    re.compile(
+        r"\b(100%\s*(safe|protected|protection|clean)|guarantees?\s+(protection|safe|zero\s+exposure)"
+        r"|makes\s+hazardous\s+air\s+harmless)\b",
+        re.I,
+    ),
 ]
 
 HTML_MARKDOWN_PATTERNS = [
@@ -26,7 +34,8 @@ HTML_MARKDOWN_PATTERNS = [
 ]
 
 OPEN_WINDOW_PATTERN = re.compile(
-    r"\b(?<!do\snot\s)(?<!don't\s)(?<!never\s)(?<!avoid\s)(open\s+(all\s+)?windows|keep\s+windows\s+open|ventilate\s+by\s+opening\s+windows)\b",
+    r"\b(?<!do\snot\s)(?<!don't\s)(?<!never\s)(?<!avoid\s)"
+    r"(open\s+(all\s+)?windows|keep\s+windows\s+open|ventilate\s+by\s+opening\s+windows)\b",
     re.I,
 )
 
@@ -66,7 +75,8 @@ def _collect_all_text(plan: GroundedPlan) -> str:
     return "\n".join(parts)
 
 
-def _check_metric_consistency(text: str, telemetry: EnvironmentalTelemetry) -> list[str]:
+def check_metric_consistency(text: str, telemetry: EnvironmentalTelemetry) -> list[str]:
+    """Verify any repeated AQI, PM2.5, or PM10 mentions match verified telemetry."""
     errors: list[str] = []
     actuals = {
         "aqi": telemetry.measurements.aqi,
@@ -87,14 +97,41 @@ def _check_metric_consistency(text: str, telemetry: EnvironmentalTelemetry) -> l
     return errors
 
 
+def check_safety_text(
+    text: str,
+    telemetry: EnvironmentalTelemetry,
+    policy: PolicyDecision,
+) -> list[str]:
+    """Run shared safety, policy-flag, HTML, and metric-consistency checks on generated text."""
+    errors: list[str] = []
+    for pat in HTML_MARKDOWN_PATTERNS:
+        if pat.search(text):
+            errors.append("Unsupported HTML or markdown code fences detected in AI output.")
+            break
+
+    for pat in MEDICAL_DIAGNOSIS_PATTERNS:
+        if pat.search(text):
+            errors.append("Medical diagnosis or medication instruction detected.")
+            break
+
+    for pat in GUARANTEE_PATTERNS:
+        if pat.search(text):
+            errors.append("Unsupported guarantee or overclaiming detected.")
+            break
+
+    if not policy.ventilationPermitted and OPEN_WINDOW_PATTERN.search(text):
+        errors.append("Recommended opening windows while ventilation_prohibited policy flag is active.")
+
+    errors.extend(check_metric_consistency(text, telemetry))
+    return errors
+
+
 def validate_ai_plan_output(
     raw_output: str | dict[str, Any],
     telemetry: EnvironmentalTelemetry,
     policy: PolicyDecision,
 ) -> ValidationResult:
     """Validate untrusted LLM JSON against Plan schema and deterministic safety rules."""
-    errors: list[str] = []
-
     if isinstance(raw_output, str):
         stripped = raw_output.strip()
         if not stripped:
@@ -114,6 +151,7 @@ def validate_ai_plan_output(
         err_msgs = [f"{'.'.join(str(x) for x in e['loc'])}: {e['msg']}" for e in exc.errors()[:5]]
         return ValidationResult(valid=False, plan=None, errors=err_msgs)
 
+    errors: list[str] = []
     periods = {t.period for t in plan.timeline}
     if periods != {"morning", "afternoon", "evening", "night"}:
         errors.append("Timeline must include morning, afternoon, evening, and night periods.")
@@ -122,29 +160,10 @@ def validate_ai_plan_output(
     if len(full_text) > 9500:
         errors.append("Generated plan exceeds UI length budget.")
 
-    for pat in HTML_MARKDOWN_PATTERNS:
-        if pat.search(full_text):
-            errors.append("Unsupported HTML or markdown code fences detected in AI output.")
-            break
-
-    for pat in MEDICAL_DIAGNOSIS_PATTERNS:
-        if pat.search(full_text):
-            errors.append("Medical diagnosis or medication instruction detected.")
-            break
-
-    for pat in GUARANTEE_PATTERNS:
-        if pat.search(full_text):
-            errors.append("Unsupported guarantee or overclaiming detected.")
-            break
-
-    if not policy.ventilationPermitted and OPEN_WINDOW_PATTERN.search(full_text):
-        errors.append("Recommended opening windows while ventilation_prohibited policy flag is active.")
-
     if not any(d.strip() for d in plan.profileDrivers):
         errors.append("Missing profileDrivers explaining how the user profile shaped the plan.")
 
-    errors.extend(_check_metric_consistency(full_text, telemetry))
-
+    errors.extend(check_safety_text(full_text, telemetry, policy))
     if errors:
         return ValidationResult(valid=False, plan=None, errors=errors)
     return ValidationResult(valid=True, plan=plan, errors=[])

@@ -1,5 +1,8 @@
 import { escapeHtml } from "../state.js";
 
+const LOCATION_PIN_SVG =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+
 export function formatMetric(value) {
   if (value === null || value === undefined) return "Unavailable";
   return Number.isInteger(value) ? String(value) : String(value);
@@ -29,11 +32,8 @@ export function formatRiskLabel(risk) {
   return labels[risk] || "Unknown";
 }
 
-const LOCATION_PIN_SVG =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
-
 /**
- * Right-hand Weather-style Hero AQI Card + Quick City Switcher (Image 1 right column).
+ * Right-hand Weather-style Hero AQI Card + Quick City Switcher.
  */
 export function renderWeatherSidebarCard(telemetry, policy, cities, selectedCityId, { onRefresh, isRefreshing = false } = {}) {
   const m = telemetry?.measurements || {};
@@ -57,42 +57,42 @@ export function renderWeatherSidebarCard(telemetry, policy, cities, selectedCity
   return `
     <div class="hero-sidebar-stack" data-testid="telemetry-region" aria-label="Live Station Reading">
       <section class="hero-aqi-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:var(--space-2); flex-wrap:wrap;">
-          <span class="muted-copy" style="display:inline-flex; align-items:center; gap:6px;">${LOCATION_PIN_SVG} ${escapeHtml(loc.city || "City")}</span>
+        <div class="row-between">
+          <span class="muted-copy inline-icon-label">${LOCATION_PIN_SVG} ${escapeHtml(loc.city || "City")}</span>
           <span class="badge ${escapeHtml(freshnessBadgeClass)}" data-testid="freshness-badge">
             ${escapeHtml(freshnessLabel)}
           </span>
         </div>
 
         <div class="hero-aqi-big tabular-num" data-testid="metric-aqi">
-          ${escapeHtml(formatMetric(m.aqi))} <span style="font-size:var(--text-base); font-weight:500;">AQI</span>
+          ${escapeHtml(formatMetric(m.aqi))} <span class="aqi-unit-label">AQI</span>
         </div>
-        <div style="display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap;">
+        <div class="row-wrap">
           <strong>${escapeHtml(aqiDesc.band)}</strong>
           <span class="badge badge-${escapeHtml(risk)}" data-testid="risk-badge">${escapeHtml(formatRiskLabel(risk))}</span>
         </div>
-        <p class="muted-copy" style="margin:var(--space-2) 0 0; font-size:var(--text-xs);">
+        <p class="muted-copy mt-2 m-0 text-xs">
           Station: ${escapeHtml(st.name || "Unknown")}
         </p>
 
         <div class="submetrics-mini">
           <div>
             <div class="metric-label">Fine Dust (PM2.5)</div>
-            <div style="font-size:var(--text-xl); font-weight:700;" class="tabular-num" data-testid="metric-pm25">
+            <div class="text-xl-bold tabular-num" data-testid="metric-pm25">
               ${escapeHtml(formatMetric(m.pm25))}
             </div>
-            <div class="muted-copy" style="font-size:0.7rem;">Deep-lung particles</div>
+            <div class="muted-copy text-micro">Deep-lung particles</div>
           </div>
           <div>
             <div class="metric-label">Coarse Dust (PM10)</div>
-            <div style="font-size:var(--text-xl); font-weight:700;" class="tabular-num" data-testid="metric-pm10">
+            <div class="text-xl-bold tabular-num" data-testid="metric-pm10">
               ${escapeHtml(formatMetric(m.pm10))}
             </div>
-            <div class="muted-copy" style="font-size:0.7rem;">Road dust &amp; pollen</div>
+            <div class="muted-copy text-micro">Road dust &amp; pollen</div>
           </div>
         </div>
 
-        <div class="provenance-bar" data-testid="provenance-bar" style="margin-top:var(--space-3); padding-top:var(--space-3); gap:var(--space-2);">
+        <div class="provenance-bar provenance-compact" data-testid="provenance-bar">
           <span><strong>Source:</strong> ${escapeHtml(s.provider || "Provider")}</span>
           <span class="tabular-num"><strong>Measured:</strong> ${escapeHtml(s.observedAt || "—")}</span>
         </div>
@@ -100,10 +100,10 @@ export function renderWeatherSidebarCard(telemetry, policy, cities, selectedCity
         ${
           onRefresh
             ? `
-          <div style="margin-top:var(--space-3);">
-            <button type="button" class="btn btn-secondary" style="width:100%;" id="refresh-telemetry-btn" ${
+          <div class="mt-3">
+            <button type="button" class="btn btn-secondary w-full" id="refresh-telemetry-btn" ${
               isRefreshing ? "disabled" : ""
-            }>${isRefreshing ? "Refreshing station…" : "↻ Refresh live reading"}</button>
+            }>${isRefreshing ? "Refreshing station…" : "Refresh live reading"}</button>
           </div>
         `
             : ""
@@ -120,7 +120,7 @@ export function renderWeatherSidebarCard(telemetry, policy, cities, selectedCity
           aria-pressed="${c.id === selectedCityId ? "true" : "false"}"
         >
           <div>
-            <div style="font-size:0.7rem; color:var(--color-ink-secondary);">${escapeHtml(c.region)}</div>
+            <div class="text-micro muted-copy">${escapeHtml(c.region)}</div>
             <strong>${escapeHtml(c.name)}</strong>
           </div>
           <span class="muted-copy">${c.id === selectedCityId ? "Active" : "Switch →"}</span>

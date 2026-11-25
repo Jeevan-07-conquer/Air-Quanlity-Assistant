@@ -270,6 +270,8 @@ function renderApp({ preserveSearchFocus = false } = {}) {
     if (input) selectionStart = input.selectionStart;
   }
 
+  appRootEl?.setAttribute("aria-busy", appState.isLoading || appState.isFollowupLoading ? "true" : "false");
+
   renderHeaderContext(headerContextEl, appState, {
     onChangeLocation: actions.onGoLanding,
   });

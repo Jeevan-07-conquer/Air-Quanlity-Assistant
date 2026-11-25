@@ -1,5 +1,7 @@
 import { escapeHtml } from "../state.js";
-import { describeAqi, renderWeatherSidebarCard } from "./telemetryCard.js";
+import { carouselOffsetAttr, renderCarouselDots } from "./carousel.js";
+import { renderFollowupAssistant } from "./followupPanel.js";
+import { renderProfileView } from "./profileForm.js";
 import {
   renderDegradedBanner,
   renderEmptyState,
@@ -8,7 +10,7 @@ import {
   renderStaleBanner,
   renderUnavailableState,
 } from "./states.js";
-import { renderProfileView } from "./profileForm.js";
+import { describeAqi, renderWeatherSidebarCard } from "./telemetryCard.js";
 
 const SIMULATE_OPTIONS = [
   { id: "normal", label: "Standard (Verified)" },
@@ -22,13 +24,6 @@ const SIMULATE_OPTIONS = [
   { id: "ai_unavailable", label: "AI unavailable (fallback)" },
 ];
 
-const QUICK_QUESTIONS = [
-  "Can my child or senior go outside today?",
-  "When is it safe to open windows?",
-  "How can I lower indoor smoke without a purifier?",
-  "What is the safest commute option right now?",
-];
-
 const PERIOD_ICONS = {
   morning:
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4"/><path d="m4.93 10.93 2.83 2.83"/><path d="m19.07 10.93-2.83 2.83"/><path d="M2 18h20"/><path d="M16 18a4 4 0 0 0-8 0"/></svg>',
@@ -39,16 +34,6 @@ const PERIOD_ICONS = {
   night:
     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
 };
-
-function carouselOffsetAttr(index, activeIndex, total) {
-  let diff = index - activeIndex;
-  if (total > 2) {
-    if (diff > total / 2) diff -= total;
-    if (diff < -total / 2) diff += total;
-  }
-  if (Math.abs(diff) > 2) return 'data-hidden="true"';
-  return `data-offset="${diff}"`;
-}
 
 function buildFlowCards(analysis) {
   const { plan } = analysis;
@@ -86,7 +71,7 @@ function buildFlowCards(analysis) {
     badgeClass: "badge-sample",
     badgeText: `${(plan.indoorAirPlan || []).length} steps`,
     title: "Protect your home air",
-    subtitle: "Practical indoor filtration & smoke reduction",
+    subtitle: "Optimal purifier placement, sealing & smoke reduction",
     body: (plan.indoorAirPlan || []).map((i) => `${i.title}: ${i.action}`).join(" • "),
     detailLabel: "Caution",
     detailText: plan.indoorAirPlan?.[0]?.caution || "Avoid indoor smoke and incense.",
@@ -111,16 +96,14 @@ function buildFlowCards(analysis) {
 function renderEvaluatorBar(activeMode, isLoading) {
   return `
     <details class="preview-toolbar">
-      <summary style="cursor:pointer; font-weight:600;">
+      <summary class="summary-toggle">
         Developer &amp; QA Testing Tools (simulate stale data or service failures)
       </summary>
-      <div style="display:flex; flex-wrap:wrap; gap:var(--space-3); align-items:center; margin-top:var(--space-3);">
-        <label for="simulate-mode-select" style="font-weight:600;">
+      <div class="row-wrap-md mt-3">
+        <label for="simulate-mode-select" class="font-semibold">
           Simulation mode:
         </label>
-        <select id="simulate-mode-select" class="select-input" style="width:auto; min-height:36px;" ${
-          isLoading ? "disabled" : ""
-        }>
+        <select id="simulate-mode-select" class="select-input select-sm" ${isLoading ? "disabled" : ""}>
           ${SIMULATE_OPTIONS.map(
             (opt) => `
             <option value="${opt.id}" ${activeMode === opt.id ? "selected" : ""}>
@@ -144,7 +127,7 @@ function renderWeatherHero(analysis, state, actions) {
     <section class="weather-hero-grid" aria-label="Today's Air Quality Overview">
       <div class="hero-forecast-pane">
         <div>
-          <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--space-2); align-items:center;">
+          <div class="row-between">
             <span class="condition-pill">
               ${degradedMode ? "Safety Rules Active" : "Live Station + AI Plan"} • ${escapeHtml(aqiDesc.band)}
             </span>
@@ -153,13 +136,13 @@ function renderWeatherHero(analysis, state, actions) {
             </span>
           </div>
 
-          <h1 class="hero-headline" style="margin-top:var(--space-4);">
+          <h1 class="hero-headline mt-4">
             ${escapeHtml(aqiDesc.band)}
           </h1>
           <p class="lead-copy" data-testid="plan-headline">
             ${escapeHtml(plan.headline)}
           </p>
-          <p class="muted-copy" style="margin:0;">
+          <p class="muted-copy m-0">
             ${escapeHtml(aqiDesc.hint)}
           </p>
         </div>
@@ -176,9 +159,9 @@ function renderWeatherHero(analysis, state, actions) {
                     data-jump-flow="${targetCarouselIndex}"
                     aria-pressed="${activePlanIdx === targetCarouselIndex ? "true" : "false"}"
                   >
-                    <div style="font-size:1.1rem;">${PERIOD_ICONS[slot.period] || "•"}</div>
-                    <div style="font-size:var(--text-xs); font-weight:600; text-transform:capitalize;">${escapeHtml(slot.period)}</div>
-                    <div class="tabular-num" style="font-size:0.7rem; color:var(--color-ink-muted);">${escapeHtml(slot.window)}</div>
+                    <div class="slot-icon">${PERIOD_ICONS[slot.period] || "•"}</div>
+                    <div class="slot-title">${escapeHtml(slot.period)}</div>
+                    <div class="tabular-num slot-window">${escapeHtml(slot.window)}</div>
                   </button>
                 `;
               })
@@ -203,31 +186,27 @@ function renderWeatherHero(analysis, state, actions) {
   `;
 }
 
-function renderSpatialActionFlow(analysis, state) {
+function renderSpatialActionFlow(analysis, state, { usePrimaryHeading = false } = {}) {
   const cards = buildFlowCards(analysis);
   const activeIdx = ((state.planCarouselIndex % cards.length) + cards.length) % cards.length;
+  const headingTag = usePrimaryHeading ? "h1" : "h2";
 
   return `
     <section class="ai-plan-region carousel-section" data-testid="ai-plan-region" aria-label="Interactive Daily Action Flow">
       <div class="carousel-header">
         <div>
           <p class="eyebrow">AI-Personalized Daily Flow (Separate From Raw Station Numbers)</p>
-          <h2 class="section-title">Glide through your plan, indoor hacks &amp; commute options</h2>
+          <${headingTag} class="section-title">Glide through your plan, indoor hacks &amp; commute options</${headingTag}>
         </div>
         <div class="carousel-controls">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            style="min-height:38px;"
-            id="toggle-view-mode-btn"
-          >
+          <button type="button" class="btn btn-secondary btn-sm" id="toggle-view-mode-btn">
             ${state.planViewMode === "flow" ? "Show all cards" : "3D Card Flow"}
           </button>
           ${
             state.planViewMode === "flow"
               ? `
-            <button type="button" class="btn btn-secondary" style="min-height:38px;" id="plan-prev-btn" aria-label="Previous plan card">←</button>
-            <button type="button" class="btn btn-secondary" style="min-height:38px;" id="plan-next-btn" aria-label="Next plan card">→</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="plan-prev-btn" aria-label="Previous plan card">←</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="plan-next-btn" aria-label="Next plan card">→</button>
           `
               : ""
           }
@@ -250,13 +229,13 @@ function renderSpatialActionFlow(analysis, state) {
                   aria-hidden="${isCenter ? "false" : "true"}"
                 >
                   <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:var(--space-2);">
-                      <span class="eyebrow" style="margin:0;">${escapeHtml(c.tag)}</span>
+                    <div class="row-between">
+                      <span class="eyebrow m-0">${escapeHtml(c.tag)}</span>
                       <span class="badge ${escapeHtml(c.badgeClass)}">${escapeHtml(c.badgeText)}</span>
                     </div>
-                    <h3 class="section-title" style="margin-top:var(--space-2);">${escapeHtml(c.title)}</h3>
-                    <p class="muted-copy" style="margin:0 0 var(--space-2); font-size:var(--text-xs);">${escapeHtml(c.subtitle)}</p>
-                    <p style="margin:0; font-size:var(--text-sm);">${escapeHtml(c.body)}</p>
+                    <h3 class="section-title mt-2">${escapeHtml(c.title)}</h3>
+                    <p class="muted-copy m-0 mb-2 text-xs">${escapeHtml(c.subtitle)}</p>
+                    <p class="m-0 text-sm">${escapeHtml(c.body)}</p>
                     ${
                       c.extra
                         ? `
@@ -272,7 +251,7 @@ function renderSpatialActionFlow(analysis, state) {
                         : ""
                     }
                   </div>
-                  <div style="border-top:1px solid var(--color-border-subtle); padding-top:var(--space-2); font-size:var(--text-xs); color:var(--color-ink-secondary);">
+                  <div class="card-footer-meta">
                     <strong>${escapeHtml(c.detailLabel)}:</strong> ${escapeHtml(c.detailText)}
                   </div>
                 </article>
@@ -281,39 +260,24 @@ function renderSpatialActionFlow(analysis, state) {
             .join("")}
         </div>
 
-        <div class="carousel-dots" role="tablist" aria-label="Daily guidance cards">
-          ${cards
-            .map(
-              (c, idx) => `
-            <button
-              type="button"
-              class="carousel-dot"
-              role="tab"
-              aria-selected="${idx === activeIdx ? "true" : "false"}"
-              aria-label="Show ${escapeHtml(c.title)}"
-              data-plan-dot="${idx}"
-            ></button>
-          `
-            )
-            .join("")}
-        </div>
+        ${renderCarouselDots(cards, activeIdx, "data-plan-dot", "Daily guidance")}
       `
           : renderGridFallback(analysis.plan)
       }
 
       <details class="rationale-disclosure">
         <summary>Why this plan? Household factors, confidence &amp; limits</summary>
-        <div class="two-col-grid" style="margin-top: var(--space-3);">
+        <div class="two-col-grid mt-3">
           <div>
             <strong>What shaped this advice:</strong>
-            <ul style="margin: var(--space-2) 0 0; padding-left: var(--space-5); font-size: var(--text-sm);">
+            <ul class="compact-list">
               ${(analysis.plan.profileDrivers || []).map((d) => `<li>${escapeHtml(d)}</li>`).join("")}
             </ul>
           </div>
           <div>
             <strong>Confidence &amp; limits:</strong>
-            <p class="muted-copy" style="margin: var(--space-2) 0 0;">${escapeHtml(analysis.plan.confidence?.reason)}</p>
-            <ul style="margin: var(--space-2) 0 0; padding-left: var(--space-5); font-size: var(--text-sm);">
+            <p class="muted-copy mt-2">${escapeHtml(analysis.plan.confidence?.reason)}</p>
+            <ul class="compact-list">
               ${(analysis.limitations || analysis.plan.limitations || []).map((l) => `<li>${escapeHtml(l)}</li>`).join("")}
             </ul>
           </div>
@@ -327,15 +291,15 @@ function renderGridFallback(plan) {
   return `
     <div data-testid="timeline-grid">
       <div class="priority-callout" data-testid="priority-action">
-        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:var(--space-2); align-items:center;">
-          <span class="eyebrow" style="margin:0;">Most Important Action Today</span>
+        <div class="row-between">
+          <span class="eyebrow m-0">Most Important Action Today</span>
           <span class="badge badge-${escapeHtml(plan.priority?.level || "moderate")}">
             ${escapeHtml((plan.priority?.level || "moderate").replace("_", " "))}
           </span>
         </div>
-        <h3 style="margin: var(--space-2) 0 var(--space-1);">${escapeHtml(plan.priority?.title)}</h3>
-        <p style="margin:0 0 var(--space-2);">${escapeHtml(plan.priority?.action)}</p>
-        <p class="muted-copy" style="margin:0;"><strong>Why:</strong> ${escapeHtml(plan.priority?.reason)}</p>
+        <h3 class="mt-2 mb-2">${escapeHtml(plan.priority?.title)}</h3>
+        <p class="m-0 mb-2">${escapeHtml(plan.priority?.action)}</p>
+        <p class="muted-copy m-0"><strong>Why:</strong> ${escapeHtml(plan.priority?.reason)}</p>
       </div>
 
       <div class="timeline-grid">
@@ -343,30 +307,30 @@ function renderGridFallback(plan) {
           .map(
             (slot) => `
           <article class="timeline-card">
-            <div style="display:flex; justify-content:space-between; gap:var(--space-2); align-items:center;">
+            <div class="row-between">
               <div>
-                <strong style="text-transform:capitalize;">${PERIOD_ICONS[slot.period] || ""} ${escapeHtml(slot.period)}</strong>
+                <strong class="capitalize inline-icon-label">${PERIOD_ICONS[slot.period] || ""} ${escapeHtml(slot.period)}</strong>
                 <div class="muted-copy tabular-num">${escapeHtml(slot.window)}</div>
               </div>
               <span class="badge badge-${escapeHtml(slot.risk)}">${escapeHtml(slot.risk.replace("_", " "))}</span>
             </div>
-            <p style="margin:0; font-size:var(--text-sm);">${escapeHtml(slot.recommendation)}</p>
-            <p class="muted-copy" style="margin:0;"><strong>Indoor backup:</strong> ${escapeHtml(slot.indoorAlternative)}</p>
+            <p class="m-0 text-sm">${escapeHtml(slot.recommendation)}</p>
+            <p class="muted-copy m-0"><strong>Indoor backup:</strong> ${escapeHtml(slot.indoorAlternative)}</p>
           </article>
         `
           )
           .join("")}
       </div>
 
-      <div class="two-col-grid" style="margin-top: var(--space-4);">
+      <div class="two-col-grid mt-4">
         <section class="decision-card">
           <p class="eyebrow">Indoor Air Hacks</p>
           ${(plan.indoorAirPlan || [])
             .map(
               (item) => `
-            <div style="margin-top:var(--space-2);">
+            <div class="mt-2">
               <strong>${escapeHtml(item.title)}</strong>
-              <p style="margin:2px 0; font-size:var(--text-sm);">${escapeHtml(item.action)}</p>
+              <p class="mt-1 m-0 text-sm">${escapeHtml(item.action)}</p>
             </div>
           `
             )
@@ -377,9 +341,9 @@ function renderGridFallback(plan) {
           ${(plan.mobilityOptions || [])
             .map(
               (mob) => `
-            <div style="margin-top:var(--space-2);">
+            <div class="mt-2">
               <strong>${escapeHtml(mob.option)}</strong>
-              <p style="margin:2px 0; font-size:var(--text-sm);">${escapeHtml(mob.whyItHelps)}</p>
+              <p class="mt-1 m-0 text-sm">${escapeHtml(mob.whyItHelps)}</p>
             </div>
           `
             )
@@ -390,71 +354,76 @@ function renderGridFallback(plan) {
   `;
 }
 
-function renderFollowupAssistant(state) {
+function renderWhyView(activeAnalysis) {
+  const { policy, plan, provenance } = activeAnalysis;
   return `
-    <section class="surface-card" id="followup-assistant-section" aria-labelledby="followup-title">
-      <p class="eyebrow">Interactive AI Assistant • Grounded in Live Air Data</p>
-      <h2 id="followup-title" class="section-title">Ask a question about today’s air or your family’s plans</h2>
-      <p class="muted-copy" style="margin-bottom: var(--space-4);">
-        Answers stay grounded in your city’s live reading, household profile, and safety rules.
-      </p>
-
-      <div class="city-quick-list" style="margin-bottom: var(--space-4);" role="group" aria-label="Suggested questions">
-        ${QUICK_QUESTIONS.map(
-          (q) => `
-          <button type="button" class="chip-btn" data-quick-question="${escapeHtml(q)}" ${
-            state.isFollowupLoading ? "disabled" : ""
-          }>
-            ${escapeHtml(q)}
-          </button>
-        `
-        ).join("")}
+    <section class="surface-card split-stack">
+      <div>
+        <p class="eyebrow">Reasoning, Safety Rules &amp; Trust</p>
+        <h1 class="section-title">Why this advice was generated</h1>
+        <p class="muted-copy">
+          Built-in safety rules inspect your city’s official station data and your household profile
+          before the AI writes any personalized advice.
+        </p>
       </div>
-
-      <form id="followup-form" class="search-row">
-        <div class="field-group">
-          <label for="followup-question-input" class="field-label">Your question</label>
-          <input
-            id="followup-question-input"
-            type="text"
-            class="text-input"
-            maxlength="300"
-            placeholder="e.g., Can I jog at 6 PM or should I work out indoors?"
-            ${state.isFollowupLoading ? "disabled" : ""}
-            required
-          />
+      <div class="two-col-grid">
+        <div class="decision-card">
+          <strong>Safety Rule Checks (v${escapeHtml(policy.policyVersion)})</strong>
+          <ul class="compact-list">
+            <li>Risk level: <strong>${escapeHtml(policy.riskCategory.replaceAll("_", " "))}</strong></li>
+            <li>Opening windows recommended: <strong>${policy.ventilationPermitted ? "Yes" : "No"}</strong></li>
+            <li>Heavy outdoor exercise discouraged: <strong>${policy.strenuousOutdoorDiscouraged ? "Yes" : "No"}</strong></li>
+            ${(policy.profileModifiersApplied || []).map((m) => `<li>${escapeHtml(m)}</li>`).join("")}
+          </ul>
         </div>
-        <button type="submit" class="btn btn-primary" ${state.isFollowupLoading ? "disabled" : ""}>
-          ${state.isFollowupLoading ? "Asking AI…" : "Ask Assistant"}
-        </button>
-      </form>
+        <div class="decision-card">
+          <strong>How Your Household Shaped the Plan (${escapeHtml(plan.confidence.level)} confidence)</strong>
+          <p class="muted-copy mt-2">${escapeHtml(plan.confidence.reason)}</p>
+          <ul class="compact-list">
+            ${(plan.profileDrivers || []).map((d) => `<li>${escapeHtml(d)}</li>`).join("")}
+          </ul>
+        </div>
+      </div>
+      <div class="surface-subtle">
+        <strong>System versions:</strong>
+        Safety Rules v${escapeHtml(provenance.policyVersion)} • Prompt v${escapeHtml(provenance.promptVersion)}
+      </div>
+    </section>
+  `;
+}
 
+function renderAboutDataView(activeAnalysis) {
+  const prov = activeAnalysis?.provenance;
+  const telem = activeAnalysis?.telemetry;
+  return `
+    <section class="surface-card split-stack">
+      <div>
+        <p class="eyebrow">Data Sources &amp; Plain-English Guide</p>
+        <h1 class="section-title">About Air Quality Terms &amp; Data Sources</h1>
+        <p class="muted-copy">
+          Readings come directly from official monitoring stations and are never invented by AI.
+        </p>
+      </div>
+      <div class="decision-card">
+        <strong>What the numbers mean</strong>
+        <ul class="compact-list">
+          <li><strong>AQI (Air Quality Index):</strong> Overall pollution score. Lower is cleaner (0–50 Clean, 101–150 Poor for sensitive groups, 151+ Unhealthy, 301+ Severe Smog).</li>
+          <li><strong>PM2.5 (Fine Dust):</strong> Microscopic soot and smoke particles that reach deep into lungs.</li>
+          <li><strong>PM10 (Coarse Dust):</strong> Larger dust, pollen, and road particles that irritate eyes, nose, and throat.</li>
+        </ul>
+      </div>
       ${
-        state.followupError
-          ? `<p class="muted-copy" role="alert" style="color:var(--color-severity-severe-fg); margin-top:var(--space-3);">${escapeHtml(
-              state.followupError
-            )}</p>`
-          : ""
-      }
-
-      ${
-        state.followupHistory.length > 0
+        prov && telem
           ? `
-        <div class="split-stack" style="gap:var(--space-3); margin-top:var(--space-4);" aria-live="polite">
-          ${state.followupHistory
-            .map(
-              (item) => `
-            <div class="decision-card">
-              <p style="margin:0 0 var(--space-2);"><strong>You asked:</strong> ${escapeHtml(item.question)}</p>
-              <p style="margin:0 0 var(--space-2);">${escapeHtml(item.answer)}</p>
-              <p class="muted-copy" style="margin:0;">
-                <strong>Practical next step:</strong> ${escapeHtml(item.nextStep)}
-                ${item.degradedMode ? " (Safety rule fallback)" : ""}
-              </p>
-            </div>
-          `
-            )
-            .join("")}
+        <div class="decision-card">
+          <strong>Current Station Details</strong>
+          <ul class="compact-list">
+            <li><strong>Provider:</strong> ${escapeHtml(prov.provider)}</li>
+            <li><strong>Station:</strong> ${escapeHtml(telem.station.name)} (ID: ${escapeHtml(telem.station.id)})</li>
+            <li class="tabular-num"><strong>Measured at:</strong> ${escapeHtml(prov.observedAt)}</li>
+            <li class="tabular-num"><strong>Checked at:</strong> ${escapeHtml(prov.retrievedAt)}</li>
+            <li><strong>Freshness:</strong> ${escapeHtml(telem.freshness.status)}</li>
+          </ul>
         </div>
       `
           : ""
@@ -524,94 +493,18 @@ export function renderAppRouteView(root, state, actions) {
     blocks.push(renderEvaluatorBar(state.simulateMode, state.isLoading));
     root.innerHTML = `<div class="split-stack">${blocks.join("")}</div>`;
   } else if (state.route === "plan") {
-    if (!activeAnalysis) {
-      root.innerHTML = renderEmptyState();
-    } else {
-      root.innerHTML = `
+    root.innerHTML = !activeAnalysis
+      ? renderEmptyState()
+      : `
         <div class="split-stack">
-          ${renderSpatialActionFlow(activeAnalysis, state)}
+          ${renderSpatialActionFlow(activeAnalysis, state, { usePrimaryHeading: true })}
           ${renderFollowupAssistant(state)}
         </div>
       `;
-    }
   } else if (state.route === "why") {
-    if (!activeAnalysis) {
-      root.innerHTML = renderEmptyState();
-    } else {
-      const { policy, plan, provenance } = activeAnalysis;
-      root.innerHTML = `
-        <section class="surface-card split-stack">
-          <div>
-            <p class="eyebrow">Reasoning, Safety Rules &amp; Trust</p>
-            <h1 class="section-title">Why this advice was generated</h1>
-            <p class="muted-copy">
-              Built-in safety rules inspect your city’s official station data and your household profile
-              before the AI writes any personalized advice.
-            </p>
-          </div>
-          <div class="two-col-grid">
-            <div class="decision-card">
-              <strong>Safety Rule Checks (v${escapeHtml(policy.policyVersion)})</strong>
-              <ul style="margin:var(--space-2) 0 0; padding-left:var(--space-5); font-size:var(--text-sm);">
-                <li>Risk level: <strong>${escapeHtml(policy.riskCategory.replaceAll("_", " "))}</strong></li>
-                <li>Opening windows recommended: <strong>${policy.ventilationPermitted ? "Yes" : "No"}</strong></li>
-                <li>Heavy outdoor exercise discouraged: <strong>${policy.strenuousOutdoorDiscouraged ? "Yes" : "No"}</strong></li>
-                ${(policy.profileModifiersApplied || []).map((m) => `<li>${escapeHtml(m)}</li>`).join("")}
-              </ul>
-            </div>
-            <div class="decision-card">
-              <strong>How Your Household Shaped the Plan (${escapeHtml(plan.confidence.level)} confidence)</strong>
-              <p class="muted-copy" style="margin:var(--space-2) 0 0;">${escapeHtml(plan.confidence.reason)}</p>
-              <ul style="margin:var(--space-2) 0 0; padding-left:var(--space-5); font-size:var(--text-sm);">
-                ${(plan.profileDrivers || []).map((d) => `<li>${escapeHtml(d)}</li>`).join("")}
-              </ul>
-            </div>
-          </div>
-          <div class="surface-subtle">
-            <strong>System versions:</strong>
-            Safety Rules v${escapeHtml(provenance.policyVersion)} • Prompt v${escapeHtml(provenance.promptVersion)}
-          </div>
-        </section>
-      `;
-    }
+    root.innerHTML = !activeAnalysis ? renderEmptyState() : renderWhyView(activeAnalysis);
   } else {
-    const prov = activeAnalysis?.provenance;
-    const telem = activeAnalysis?.telemetry;
-    root.innerHTML = `
-      <section class="surface-card split-stack">
-        <div>
-          <p class="eyebrow">Data Sources &amp; Plain-English Guide</p>
-          <h1 class="section-title">About Air Quality Terms &amp; Data Sources</h1>
-          <p class="muted-copy">
-            Readings come directly from official monitoring stations and are never invented by AI.
-          </p>
-        </div>
-        <div class="decision-card">
-          <strong>What the numbers mean</strong>
-          <ul style="margin:var(--space-2) 0 0; padding-left:var(--space-5); font-size:var(--text-sm);">
-            <li><strong>AQI (Air Quality Index):</strong> Overall pollution score. Lower is cleaner (0–50 Clean, 101–150 Poor for sensitive groups, 151+ Unhealthy, 301+ Severe Smog).</li>
-            <li><strong>PM2.5 (Fine Dust):</strong> Microscopic soot and smoke particles that reach deep into lungs.</li>
-            <li><strong>PM10 (Coarse Dust):</strong> Larger dust, pollen, and road particles that irritate eyes, nose, and throat.</li>
-          </ul>
-        </div>
-        ${
-          prov && telem
-            ? `
-          <div class="decision-card">
-            <strong>Current Station Details</strong>
-            <ul style="margin:var(--space-2) 0 0; padding-left:var(--space-5); font-size:var(--text-sm);">
-              <li><strong>Provider:</strong> ${escapeHtml(prov.provider)}</li>
-              <li><strong>Station:</strong> ${escapeHtml(telem.station.name)} (ID: ${escapeHtml(telem.station.id)})</li>
-              <li class="tabular-num"><strong>Measured at:</strong> ${escapeHtml(prov.observedAt)}</li>
-              <li class="tabular-num"><strong>Checked at:</strong> ${escapeHtml(prov.retrievedAt)}</li>
-              <li><strong>Freshness:</strong> ${escapeHtml(telem.freshness.status)}</li>
-            </ul>
-          </div>
-        `
-            : ""
-        }
-      </section>
-    `;
+    root.innerHTML = renderAboutDataView(activeAnalysis);
   }
 
   root.querySelector("#simulate-mode-select")?.addEventListener("change", (e) => {
@@ -638,9 +531,6 @@ export function renderAppRouteView(root, state, actions) {
         actions.onSetPlanCarousel(idx);
       }
     });
-  });
-  root.querySelectorAll("[data-nav-target]").forEach((btn) => {
-    btn.addEventListener("click", () => actions.onNavigate(btn.dataset.navTarget));
   });
   root.querySelectorAll('[data-action="go-landing"]').forEach((btn) => {
     btn.addEventListener("click", actions.onGoLanding);

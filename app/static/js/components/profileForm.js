@@ -36,7 +36,7 @@ export function renderProfileView(root, state, actions) {
   root.innerHTML = `
     <div class="landing-layout">
       <section class="surface-card" aria-labelledby="profile-heading">
-        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:var(--space-3); align-items:flex-start;">
+        <div class="row-between-start">
           <div>
             <p class="eyebrow">Profile Setup • Progressive Disclosure</p>
             <h1 id="profile-heading" class="section-title">Tailor guidance to your household &amp; routine</h1>
@@ -87,7 +87,7 @@ export function renderProfileView(root, state, actions) {
               ).join("")}
             </div>
 
-            <div class="search-row" style="margin-top: var(--space-4);">
+            <div class="search-row mt-4">
               <div class="field-group">
                 <label for="commute-mode-select" class="field-label">Primary transport mode</label>
                 <select id="commute-mode-select" name="commuteMode" class="select-input">
@@ -114,7 +114,7 @@ export function renderProfileView(root, state, actions) {
 
           <fieldset class="fieldset-card">
             <legend class="fieldset-legend">3. Planned outdoor activity &amp; exertion (Optional)</legend>
-            <div class="search-row" style="margin-top: var(--space-2);">
+            <div class="search-row mt-2">
               <div class="field-group">
                 <label for="planned-activity-input" class="field-label">Planned outdoor activity</label>
                 <input
@@ -137,7 +137,7 @@ export function renderProfileView(root, state, actions) {
                 </select>
               </div>
             </div>
-            <label class="check-tile" style="margin-top: var(--space-3);">
+            <label class="check-tile mt-3">
               <input type="checkbox" name="outdoorWorkerOrAthlete" ${p.outdoorWorkerOrAthlete ? "checked" : ""} />
               <span>High-exertion outdoor athlete or outdoor worker</span>
             </label>
@@ -146,7 +146,7 @@ export function renderProfileView(root, state, actions) {
           <fieldset class="fieldset-card">
             <legend class="fieldset-legend">4. Indoor air context &amp; optional health sensitivity</legend>
             <p class="field-hint">
-              Why we ask: determines whether purifier filtration, kitchen exhaust, or stricter respiratory cautions apply.
+              Why we ask: determines whether purifier placement, kitchen exhaust, or stricter respiratory cautions apply.
               Health selections stay in your browser session only.
             </p>
             <div class="option-grid">
@@ -179,7 +179,7 @@ export function renderProfileView(root, state, actions) {
             </div>
           </fieldset>
 
-          <div id="profile-validation-error" class="state-panel state-panel-error" role="alert" style="display:none;"></div>
+          <div id="profile-validation-error" class="state-panel state-panel-error is-hidden" role="alert"></div>
 
           <div class="cta-bar">
             <button type="button" class="btn btn-secondary" id="clear-profile-btn">
@@ -209,11 +209,11 @@ export function renderProfileView(root, state, actions) {
 
     const errBox = root.querySelector("#profile-validation-error");
     if (household.length === 0 || primaryActivities.length === 0) {
-      errBox.style.display = "block";
+      errBox.classList.remove("is-hidden");
       errBox.textContent = "Please select at least one household member and one primary activity.";
       return;
     }
-    errBox.style.display = "none";
+    errBox.classList.add("is-hidden");
 
     const activityText = form.querySelector("#planned-activity-input").value.trim();
     const preferredPeriod = form.querySelector("#planned-period-select").value;
@@ -231,9 +231,7 @@ export function renderProfileView(root, state, actions) {
         cookingExposure: form.querySelector('input[name="cookingExposure"]').checked,
         ventilationConstraints: form.querySelector('input[name="ventilationConstraints"]').checked,
       },
-      plannedOutdoorActivity: activityText
-        ? { activity: activityText, preferredPeriod }
-        : null,
+      plannedOutdoorActivity: activityText ? { activity: activityText, preferredPeriod } : null,
       priorities: p.priorities || [],
       isSamplePreset: false,
       presetId: null,

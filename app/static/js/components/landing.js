@@ -1,4 +1,5 @@
 import { escapeHtml } from "../state.js";
+import { carouselOffsetAttr, renderCarouselDots } from "./carousel.js";
 
 function findCityMatches(cities, query) {
   const q = query.trim().toLowerCase();
@@ -11,28 +12,20 @@ function findCityMatches(cities, query) {
   );
 }
 
-function carouselOffsetAttr(index, activeIndex, total) {
-  let diff = index - activeIndex;
-  if (total > 2) {
-    if (diff > total / 2) diff -= total;
-    if (diff < -total / 2) diff += total;
-  }
-  if (Math.abs(diff) > 2) return 'data-hidden="true"';
-  return `data-offset="${diff}"`;
-}
-
 export function renderLandingView(root, state, actions) {
   const matches = findCityMatches(state.cities, state.searchQuery);
   const selectedCity = state.cities.find((c) => c.id === state.selectedCityId);
   const hasUnsupportedQuery = state.searchQuery.trim().length > 0 && matches.length === 0;
   const presets = state.presets || [];
-  const activeIdx = presets.length ? ((state.landingCarouselIndex % presets.length) + presets.length) % presets.length : 0;
+  const activeIdx = presets.length
+    ? ((state.landingCarouselIndex % presets.length) + presets.length) % presets.length
+    : 0;
 
   root.innerHTML = `
     <div class="landing-layout">
       <section class="surface-card" aria-labelledby="landing-headline">
         <span class="condition-pill">Atmospheric Air &amp; Daily Routine Assistant</span>
-        <h1 id="landing-headline" class="hero-headline" style="margin-top:var(--space-3);">
+        <h1 id="landing-headline" class="hero-headline mt-3">
           Turn today’s air quality into a safer daily plan.
         </h1>
         <p class="lead-copy">
@@ -72,7 +65,7 @@ export function renderLandingView(root, state, actions) {
               ${matches
                 .map(
                   (city) => `
-                <li>
+                <li role="presentation">
                   <button
                     type="button"
                     class="city-option"
@@ -95,7 +88,7 @@ export function renderLandingView(root, state, actions) {
           ${
             hasUnsupportedQuery
               ? `
-            <div class="state-panel state-panel-neutral" role="status" style="margin-top: var(--space-3);">
+            <div class="state-panel state-panel-neutral mt-3" role="status">
               <strong>Location not yet supported:</strong> "${escapeHtml(state.searchQuery.trim())}"
               is outside the supported cities (Delhi, Noida, Mumbai, Kolkata). Pick a city below.
             </div>
@@ -106,7 +99,7 @@ export function renderLandingView(root, state, actions) {
           ${
             state.locationNotice
               ? `
-            <div class="state-panel state-panel-neutral" role="status" style="margin-top: var(--space-3);">
+            <div class="state-panel state-panel-neutral mt-3" role="status">
               ${escapeHtml(state.locationNotice)}
             </div>
           `
@@ -134,7 +127,7 @@ export function renderLandingView(root, state, actions) {
             <p class="trust-line">
               Live station readings are displayed separately from AI guidance.
             </p>
-            <div style="display:flex; gap:var(--space-2); flex-wrap:wrap;">
+            <div class="row-wrap">
               <button
                 type="button"
                 class="btn btn-secondary"
@@ -186,15 +179,15 @@ export function renderLandingView(root, state, actions) {
                     aria-hidden="${isCenter ? "false" : "true"}"
                   >
                     <div>
-                      <div style="display:flex; justify-content:space-between; align-items:center; gap:var(--space-2);">
+                      <div class="row-between">
                         <span class="badge badge-sample">${escapeHtml(preset.badge)}</span>
                         <span class="muted-copy tabular-num">${idx + 1} / ${presets.length}</span>
                       </div>
-                      <h3 class="section-title" style="margin-top:var(--space-3);">${escapeHtml(preset.title)}</h3>
-                      <p class="muted-copy" style="margin:0 0 var(--space-2);">${escapeHtml(preset.subtitle)}</p>
-                      <p style="margin:0; font-size:var(--text-sm);">${escapeHtml(preset.profile_summary)}</p>
+                      <h3 class="section-title mt-3">${escapeHtml(preset.title)}</h3>
+                      <p class="muted-copy m-0 mb-2">${escapeHtml(preset.subtitle)}</p>
+                      <p class="m-0 text-sm">${escapeHtml(preset.profile_summary)}</p>
                     </div>
-                    <div style="display:flex; justify-content:flex-end;">
+                    <div class="row-end">
                       <button
                         type="button"
                         class="btn btn-primary"
@@ -210,22 +203,7 @@ export function renderLandingView(root, state, actions) {
               .join("")}
           </div>
 
-          <div class="carousel-dots" role="tablist" aria-label="Sample profile cards">
-            ${presets
-              .map(
-                (preset, idx) => `
-              <button
-                type="button"
-                class="carousel-dot"
-                role="tab"
-                aria-selected="${idx === activeIdx ? "true" : "false"}"
-                aria-label="Show ${escapeHtml(preset.title)}"
-                data-landing-dot="${idx}"
-              ></button>
-            `
-              )
-              .join("")}
-          </div>
+          ${renderCarouselDots(presets, activeIdx, "data-landing-dot", "Sample profile")}
         </section>
       `
           : ""

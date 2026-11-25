@@ -12,21 +12,22 @@ export function renderMultiStepLoader(activeIndex = 0, { hasPreviousResult = fal
       <p class="eyebrow">Analysis in progress</p>
       <h2 class="section-title">Preparing today’s guidance</h2>
       <p class="muted-copy">
-        ${hasPreviousResult
-      ? "Preserving your previous verified reading below while fetching the latest update."
-      : "Environmental measurements are verified before any personalized guidance is assembled."
-    }
+        ${
+          hasPreviousResult
+            ? "Preserving your previous verified reading below while fetching the latest update."
+            : "Environmental measurements are verified before any personalized guidance is assembled."
+        }
       </p>
       <ol class="loader-steps">
         ${LOADING_STEPS.map((label, idx) => {
-      const status = idx < activeIndex ? "done" : idx === activeIndex ? "active" : "pending";
-      return `
+          const status = idx < activeIndex ? "done" : idx === activeIndex ? "active" : "pending";
+          return `
             <li class="loader-step" data-status="${status}">
               <span class="step-dot" aria-hidden="true"></span>
               <span>${escapeHtml(label)}</span>
             </li>
           `;
-    }).join("")}
+        }).join("")}
       </ol>
     </section>
   `;
@@ -40,7 +41,7 @@ export function renderEmptyState() {
       <p class="muted-copy">
         Choose one of the supported Indian cities or load a labeled sample profile to see verified readings and personalized guidance.
       </p>
-      <div style="margin-top: var(--space-4);">
+      <div class="mt-4">
         <button type="button" class="btn btn-primary" data-action="go-landing">
           Choose city or sample profile
         </button>
@@ -52,11 +53,11 @@ export function renderEmptyState() {
 export function renderStaleBanner({ ageMinutes, observedAt } = {}) {
   return `
     <section class="state-panel state-panel-warning" role="status" data-testid="stale-warning" aria-label="Stale telemetry warning">
-      <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:var(--space-2); align-items:center;">
+      <div class="row-between">
         <span class="badge badge-stale">Stale reading (${escapeHtml(ageMinutes ?? "120+")} min old)</span>
         <span class="muted-copy tabular-num">Last observed: ${escapeHtml(observedAt || "Unknown")}</span>
       </div>
-      <p style="margin: var(--space-3) 0 0;">
+      <p class="mt-3 m-0">
         <strong>What happened:</strong> The monitoring station has not reported a recent update.
         <strong>What remains trustworthy:</strong> The last verified values are shown with conservative safety guidance until a fresh reading arrives.
       </p>
@@ -96,8 +97,8 @@ export function renderDegradedBanner(degradedReason) {
   return `
     <section class="state-panel state-panel-warning" role="status" data-testid="degraded-banner">
       <span class="badge badge-stale">${escapeHtml(info.badge)}</span>
-      <h2 class="section-title" style="margin-top: var(--space-2);">${escapeHtml(info.title)}</h2>
-      <p style="margin:0;">${escapeHtml(info.msg)}</p>
+      <h2 class="section-title mt-2">${escapeHtml(info.title)}</h2>
+      <p class="m-0">${escapeHtml(info.msg)}</p>
     </section>
   `;
 }
@@ -106,13 +107,13 @@ export function renderUnavailableState({ cityName = "Selected city", reason = ""
   return `
     <section class="state-panel state-panel-neutral" role="status" data-testid="unavailable-state">
       <span class="badge badge-unavailable">Unavailable</span>
-      <h2 class="section-title" style="margin-top: var(--space-3);">
+      <h2 class="section-title mt-3">
         No trustworthy air-quality reading is available for ${escapeHtml(cityName)}
       </h2>
       <p class="muted-copy">
         ${escapeHtml(reason || "Because verified station readings could not be confirmed, location-specific AI guidance is paused. We never invent current AQI numbers.")}
       </p>
-      <div style="margin-top: var(--space-4); display:flex; gap:var(--space-3); flex-wrap:wrap;">
+      <div class="mt-4 row-wrap-md">
         <button type="button" class="btn btn-primary" data-action="retry-analysis">Retry reading</button>
         <button type="button" class="btn btn-secondary" data-action="go-landing">Choose another city</button>
       </div>
@@ -126,13 +127,14 @@ export function renderErrorState({ detail, hasPreviousResult = false } = {}) {
       <p class="eyebrow">Request error</p>
       <h2 class="section-title">Could not refresh today’s analysis</h2>
       <p>${escapeHtml(detail || "A temporary network or server error occurred.")}</p>
-      <p class="muted-copy" style="margin-top: var(--space-2);">
-        ${hasPreviousResult
-      ? "Your previous verified result remains displayed below."
-      : "Please try again or switch to another supported city."
-    }
+      <p class="muted-copy mt-2">
+        ${
+          hasPreviousResult
+            ? "Your previous verified result remains displayed below."
+            : "Please try again or switch to another supported city."
+        }
       </p>
-      <div style="margin-top: var(--space-4); display:flex; gap:var(--space-3); flex-wrap:wrap;">
+      <div class="mt-4 row-wrap-md">
         <button type="button" class="btn btn-primary" data-action="retry-analysis">Retry request</button>
         <button type="button" class="btn btn-secondary" data-action="go-landing">Change city</button>
       </div>

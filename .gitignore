@@ -3,10 +3,9 @@
 .env.local
 .env.*.local
 
-# Private prompts & non-runtime repo docs/tests
+# Private prompts & internal docs
 app/prompts/private_prompts.json
 docs/
-tests/
 
 # Python artifacts
 __pycache__/

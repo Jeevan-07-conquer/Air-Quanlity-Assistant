@@ -1,19 +1,15 @@
-"""Grounded conversational follow-up service using Gemini Flash with safety checks (SRD §8.8)."""
+"""Grounded conversational follow-up service using shared Gemini helper & safety checks (SRD §8.8)."""
 
 import json
 import os
 from typing import Optional
 
+from pydantic import ValidationError
+
 from app.prompts.templates import FOLLOWUP_SYSTEM_PROMPT_V1, FOLLOWUP_USER_TEMPLATE_V1
 from app.schemas.followup import FollowupRequest, FollowupResponse
-from app.services.llm_service import DEFAULT_FLASH_MODEL, FALLBACK_FLASH_MODELS
-from app.services.validation_service import (
-    GUARANTEE_PATTERNS,
-    HTML_MARKDOWN_PATTERNS,
-    MEDICAL_DIAGNOSIS_PATTERNS,
-    OPEN_WINDOW_PATTERN,
-    _check_metric_consistency,
-)
+from app.services.llm_service import LLMProviderError, generate_gemini_json
+from app.services.validation_service import check_safety_text
 
 
 def _fmt_num(val: Optional[float]) -> str:
@@ -40,7 +36,7 @@ def _deterministic_followup(req: FollowupRequest) -> FollowupResponse:
                 f"is {req.policy.riskCategory.replace('_', ' ')}."
             )
             step = (
-                "Keep windows closed and run your air purifier in the main living room."
+                "Keep windows closed and run your air purifier centrally in the occupied room."
                 if req.profile.indoorContext.purifierAvailable
                 else "Keep exterior windows shut and reduce indoor smoke from cooking or incense."
             )
@@ -58,34 +54,23 @@ def _deterministic_followup(req: FollowupRequest) -> FollowupResponse:
 
 def _validate_followup(raw_text: str, req: FollowupRequest) -> Optional[FollowupResponse]:
     try:
-        data = json.loads(raw_text)
-        resp = FollowupResponse.model_validate(data)
-    except Exception:
+        resp = FollowupResponse.model_validate(json.loads(raw_text))
+    except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
         return None
 
     combined = f"{resp.answer}\n{resp.nextStep}"
     if len(resp.answer.split()) > 135:
         return None
-    for pat in (*HTML_MARKDOWN_PATTERNS, *MEDICAL_DIAGNOSIS_PATTERNS, *GUARANTEE_PATTERNS):
-        if pat.search(combined):
-            return None
-    if not req.policy.ventilationPermitted and OPEN_WINDOW_PATTERN.search(combined):
-        return None
-    if _check_metric_consistency(combined, req.telemetry):
+    if check_safety_text(combined, req.telemetry, req.policy):
         return None
     return resp
 
 
 def answer_followup_question(req: FollowupRequest) -> FollowupResponse:
+    """Answer a user follow-up question strictly grounded in verified telemetry and current plan."""
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     ai_provider = os.environ.get("AI_PROVIDER", "google").strip().lower()
     if ai_provider != "google" or not api_key:
-        return _deterministic_followup(req)
-
-    try:
-        from google import genai
-        from google.genai import types
-    except ImportError:
         return _deterministic_followup(req)
 
     timeline_lines = [
@@ -113,39 +98,21 @@ def answer_followup_question(req: FollowupRequest) -> FollowupResponse:
         question=req.question.strip(),
     )
 
-    configured = os.environ.get("AI_MODEL", DEFAULT_FLASH_MODEL).strip()
-    candidates: list[str] = []
-    for m in (configured, *FALLBACK_FLASH_MODELS):
-        if m and m not in candidates:
-            candidates.append(m)
-
     timeout_ms = int(os.environ.get("AI_TIMEOUT_MS", "20000"))
-    client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=timeout_ms))
+    try:
+        raw_text = generate_gemini_json(
+            api_key=api_key,
+            system_instruction=FOLLOWUP_SYSTEM_PROMPT_V1,
+            user_content=user_content,
+            response_schema=FollowupResponse,
+            max_output_tokens=600,
+            timeout_ms=timeout_ms,
+            thinking_budget=256,
+        )
+    except LLMProviderError:
+        return _deterministic_followup(req)
 
-    for model in candidates:
-        cfg_kwargs: dict = {
-            "system_instruction": FOLLOWUP_SYSTEM_PROMPT_V1,
-            "response_mime_type": "application/json",
-            "response_schema": FollowupResponse,
-            "temperature": 0.2,
-            "max_output_tokens": 600,
-        }
-        if "lite" not in model.lower():
-            cfg_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=256)
-
-        try:
-            res = client.models.generate_content(
-                model=model,
-                contents=user_content,
-                config=types.GenerateContentConfig(**cfg_kwargs),
-            )
-            text = getattr(res, "text", None)
-            if not text:
-                continue
-            validated = _validate_followup(text, req)
-            if validated is not None:
-                return validated.model_copy(update={"degradedMode": False})
-        except Exception:
-            continue
-
+    validated = _validate_followup(raw_text, req)
+    if validated is not None:
+        return validated.model_copy(update={"degradedMode": False})
     return _deterministic_followup(req)

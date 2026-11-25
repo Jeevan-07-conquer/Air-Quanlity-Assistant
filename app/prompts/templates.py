@@ -27,6 +27,7 @@ _DEFAULT_FOLLOWUP_SYSTEM_PROMPT_V1 = (
 
 
 def _load_prompt_overrides() -> dict[str, str]:
+    """Load optional base64-encoded JSON overrides or local private_prompts.json."""
     b64_raw = os.environ.get("PROMPTS_B64", "").strip()
     if b64_raw:
         try:
@@ -34,7 +35,7 @@ def _load_prompt_overrides() -> dict[str, str]:
             parsed = json.loads(decoded)
             if isinstance(parsed, dict):
                 return {str(k): str(v) for k, v in parsed.items()}
-        except Exception:
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
             pass
 
     local_file = Path(__file__).resolve().parent / "private_prompts.json"
@@ -43,7 +44,7 @@ def _load_prompt_overrides() -> dict[str, str]:
             parsed = json.loads(local_file.read_text(encoding="utf-8"))
             if isinstance(parsed, dict):
                 return {str(k): str(v) for k, v in parsed.items()}
-        except Exception:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             pass
     return {}
 

@@ -1,9 +1,9 @@
-"""Starlette ASGI entry point with API endpoints and production security hardening (SRD Prompts 02, 08, 11)."""
+"""Starlette ASGI entry point with API endpoints and strict security hardening."""
 
 import hmac
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 from app.config.env_loader import load_env_file
 
@@ -34,7 +34,7 @@ RATE_LIMITER = SlidingWindowRateLimiter(max_requests=45, window_seconds=60)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Add security headers, HSTS over HTTPS, no-store on APIs, and restrictive CSP."""
+    """Add strict security headers, HSTS over HTTPS, no-store on APIs, and strict CSP."""
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
@@ -48,7 +48,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "style-src 'self'; "
             "img-src 'self' data:; "
             "connect-src 'self'; "
             "object-src 'none'; "
@@ -85,24 +85,48 @@ def _exceeds_content_length(request: Request, limit: int) -> bool:
         return True
 
 
-async def healthz(_request: Request):
+async def _guard_post_json(request: Request, max_bytes: int) -> Tuple[Optional[dict], Optional[JSONResponse]]:
+    """Apply shared rate limiting, payload size caps, and JSON parsing for POST endpoints."""
+    if not RATE_LIMITER.allow(_client_key(request)):
+        return None, JSONResponse(
+            {"error": "Rate limit exceeded. Please wait briefly before retrying."},
+            status_code=429,
+        )
+
+    if _exceeds_content_length(request, max_bytes):
+        return None, JSONResponse({"error": "Request body exceeds maximum allowed size."}, status_code=413)
+
+    raw_body = await request.body()
+    if len(raw_body) > max_bytes:
+        return None, JSONResponse({"error": "Request body exceeds maximum allowed size."}, status_code=413)
+
+    try:
+        payload = await request.json()
+    except ValueError:
+        return None, JSONResponse({"error": "Malformed JSON request body."}, status_code=400)
+
+    if not isinstance(payload, dict):
+        return None, JSONResponse({"error": "JSON body must be an object."}, status_code=400)
+    return payload, None
+
+
+async def healthz(_request: Request) -> JSONResponse:
+    """Liveness check endpoint for container and cloud health probes."""
     return JSONResponse({"status": "ok", "version": "1.0"})
 
 
-async def index(_request: Request):
+async def index(_request: Request) -> FileResponse:
+    """Serve the single-page editorial weather-inspired application shell."""
     return FileResponse(STATIC_DIR / "index.html")
 
 
-async def shell_bootstrap(_request: Request):
-    return JSONResponse(
-        {
-            "cities": SUPPORTED_CITIES,
-            "presets": SAMPLE_PRESETS,
-        }
-    )
+async def shell_bootstrap(_request: Request) -> JSONResponse:
+    """Return supported Indian cities and labeled sample profiles."""
+    return JSONResponse({"cities": SUPPORTED_CITIES, "presets": SAMPLE_PRESETS})
 
 
-async def get_locations(request: Request):
+async def get_locations(request: Request) -> JSONResponse:
+    """Resolve supported cities by text query or optional coordinates."""
     if not RATE_LIMITER.allow(_client_key(request)):
         return JSONResponse(
             {"error": "Rate limit exceeded. Please wait briefly before retrying."},
@@ -128,25 +152,14 @@ async def get_locations(request: Request):
     return JSONResponse(res.model_dump())
 
 
-async def post_analysis(request: Request):
-    if not RATE_LIMITER.allow(_client_key(request)):
-        return JSONResponse(
-            {"error": "Rate limit exceeded. Please wait briefly before retrying."},
-            status_code=429,
-        )
-
-    if _exceeds_content_length(request, MAX_REQUEST_BYTES):
-        return JSONResponse({"error": "Request body exceeds maximum allowed size."}, status_code=413)
-
-    raw_body = await request.body()
-    if len(raw_body) > MAX_REQUEST_BYTES:
-        return JSONResponse({"error": "Request body exceeds maximum allowed size."}, status_code=413)
+async def post_analysis(request: Request) -> JSONResponse:
+    """Run telemetry fetch, deterministic policy evaluation, and grounded AI planning."""
+    payload, error_resp = await _guard_post_json(request, MAX_REQUEST_BYTES)
+    if error_resp is not None or payload is None:
+        return error_resp  # type: ignore[return-value]
 
     try:
-        payload = await request.json()
         parsed_req = AnalysisRequest.model_validate(payload)
-    except ValueError:
-        return JSONResponse({"error": "Malformed JSON request body."}, status_code=400)
     except ValidationError as exc:
         return JSONResponse(
             {
@@ -168,25 +181,15 @@ async def post_analysis(request: Request):
         )
 
 
-async def post_followup(request: Request):
-    if not RATE_LIMITER.allow(_client_key(request)):
-        return JSONResponse(
-            {"error": "Rate limit exceeded. Please wait briefly before retrying."},
-            status_code=429,
-        )
-
-    max_followup_bytes = MAX_REQUEST_BYTES * 2
-    if _exceeds_content_length(request, max_followup_bytes):
-        return JSONResponse({"error": "Request body exceeds maximum allowed size."}, status_code=413)
-
-    raw_body = await request.body()
-    if len(raw_body) > max_followup_bytes:
-        return JSONResponse({"error": "Request body exceeds maximum allowed size."}, status_code=413)
+async def post_followup(request: Request) -> JSONResponse:
+    """Answer a follow-up question strictly grounded in current verified data and plan."""
+    payload, error_resp = await _guard_post_json(request, MAX_REQUEST_BYTES * 2)
+    if error_resp is not None or payload is None:
+        return error_resp  # type: ignore[return-value]
 
     try:
-        payload = await request.json()
         parsed_req = FollowupRequest.model_validate(payload)
-    except (ValueError, ValidationError):
+    except ValidationError:
         return JSONResponse({"error": "Invalid follow-up question request."}, status_code=400)
 
     try:
@@ -199,7 +202,8 @@ async def post_followup(request: Request):
         )
 
 
-async def get_observability(request: Request):
+async def get_observability(request: Request) -> JSONResponse:
+    """Return redacted pipeline metrics when enabled and authorized."""
     required_token = os.environ.get("OBSERVABILITY_TOKEN", "").strip()
     is_prod = os.environ.get("APP_ENV", "development").strip().lower() == "production"
 

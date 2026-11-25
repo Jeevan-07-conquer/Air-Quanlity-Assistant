@@ -81,7 +81,7 @@ def build_deterministic_fallback_plan(
     )
 
     purifier_note = (
-        "Run your HEPA air purifier continuously in the main occupied room with doors shut."
+        "Place your HEPA air purifier centrally in the closed bedroom or main living room away from doors/walls and run continuously."
         if profile.indoorContext.purifierAvailable
         else "Keep doors closed in main living/sleeping areas and wet-mop dust instead of dry sweeping."
     )
@@ -123,10 +123,10 @@ def build_deterministic_fallback_plan(
             action=ventilation_action,
             reason="Outdoor particulate levels and household constraints govern safe window opening.",
             when="Throughout today until conditions improve",
-            caution="Never rely on indoor plants to clear hazardous particulates.",
+            caution="Indoor plants add comfort but cannot replace mechanical HEPA filtration during severe smog.",
         ),
         IndoorAirItem(
-            title="Indoor particulate control",
+            title="Purifier placement & indoor particulate control",
             action=purifier_note,
             reason="Limits indoor buildup from outdoor infiltration and household dust.",
             when="Especially during morning and night hours",

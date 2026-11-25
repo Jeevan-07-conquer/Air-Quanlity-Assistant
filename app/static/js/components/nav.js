@@ -36,7 +36,7 @@ export function renderHeaderContext(container, state, { onChangeLocation }) {
   container.innerHTML = `
     ${city ? `<span class="location-pill">${LOCATION_PIN_SVG} <strong>${escapeHtml(city.name)}</strong></span>` : ""}
     ${preset ? `<span class="badge badge-sample">${escapeHtml(preset.title)}</span>` : ""}
-    <button type="button" class="btn btn-secondary" style="min-height:36px;" id="header-change-city-btn">Change city</button>
+    <button type="button" class="btn btn-secondary btn-sm" id="header-change-city-btn">Change city</button>
   `;
 
   container.querySelector("#header-change-city-btn")?.addEventListener("click", onChangeLocation);
